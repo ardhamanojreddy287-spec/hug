@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Code Learning Assistant</title>
+  <script src="python.py"></script>
+  <style>
+    :root{
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --muted: #6b7280;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg, #eef2ff 0%, var(--bg) 40%);
+      color:#111827;
+      padding:24px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+    }
+
+    .container{
+      width:100%;
+      max-width:980px;
+      background:var(--card);
+      border-radius:12px;
+      box-shadow: 0 6px 24px rgba(13, 38, 76, 0.08);
+      padding:18px;
+    }
+
+    header{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    header h1{
+      margin:0;
+      font-size:20px;
+      letter-spacing:0.2px;
+    }
+    header p{ margin:0; color:var(--muted); font-size:13px }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 1fr 380px;
+      gap:16px;
+    }
+
+    .editor{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    label.small{ font-size:13px; color:var(--muted) }
+
+    textarea#code {
+      width:100%;
+      min-height:360px;
+      resize:vertical;
+      padding:12px;
+      border-radius:8px;
+      border:1px solid #e6e9ef;
+      background: #0f172a05;
+      font-family: var(--mono);
+      font-size:13px;
+      line-height:1.45;
+      color:#0f172a;
+      outline:none;
+    }
+    .controls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      margin-top:6px;
+    }
+    button{
+      background:var(--accent);
+      color:white;
+      border:none;
+      padding:10px 14px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+      box-shadow:none;
+    }
+    button.secondary{
+      background:transparent;
+      color:var(--accent);
+      border:1px solid #dbeafe;
+    }
+    button:active{ transform:translateY(1px) }
+
+    .side {
+      background:linear-gradient(180deg,#ffffff, #fbfdff);
+      border-radius:10px;
+      padding:12px;
+      border:1px solid #eef2ff;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .result {
+      flex:1;
+      padding:12px;
+      border-radius:8px;
+      background:#0f172a03;
+      border:1px dashed #e6edf9;
+      overflow:auto;
+      font-family:var(--mono);
+      font-size:14px;
+      white-space:pre-wrap;
+    }
+
+    .hint { color:var(--muted); font-size:13px; margin-top:6px }
+    .status {
+      display:flex;
+      gap:8px;
+      align-items:center;
+      font-weight:700;
+    }
+    .dot { width:10px; height:10px; border-radius:50% }
+    .ok { color:var(--success) }
+    .err { color:var(--danger) }
+
+    footer { margin-top:12px; color:var(--muted); font-size:13px; display:flex; justify-content:space-between; align-items:center }
+    @media (max-width:900px){
+      .layout{ grid-template-columns: 1fr; }
+      .side{ order:2 }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="main">
+    <header>
+      <div>
+        <h1>Code Learning Assistant</h1>
+        <p>Paste Python code, click <strong>Check</strong>, and get a friendly hint or success message.</p>
+      </div>
+    </header>
+
+    <div class="layout">
+      <div class="editor" aria-label="code editor">
+        <label class="small" for="code">Python code</label>
+        <textarea id="code" spellcheck="false" placeholder="# Type Python code here...">
+for i in range(5)
+    print(i)
+        </textarea>
+
+        <div class="controls">
+          <button id="checkBtn">Check</button>
+          <button id="clearBtn" class="secondary">Clear</button>
+          <label style="margin-left:auto; font-size:13px; color:var(--muted)">
+            Auto-run
+            <input id="autoToggle" type="checkbox" style="margin-left:8px"/>
+          </label>
+        </div>
+      </div>
+
+      <aside class="side" aria-label="results">
+        <div class="status" id="statusLine">
+          <span class="dot" id="statusDot" style="background:#f59e0b"></span>
+          <span id="statusText">Idle — ready</span>
+        </div>
+
+        <div class="result" id="resultBox">
+# Result will appear here
+        </div>
+
+        <div class="hint">
+          Backend endpoint: <code>POST /check</code> with JSON <code>{"code": "...your code..."}</code>.
+          (Make sure backend is running on the same origin or enable CORS.)
+        </div>
+
+        <footer>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="opacity:.7"><path d="M12 2L2 7l10 5 10-5-10-5zm0 13l-10-5v6l10 5 10-5v-6l-10 5z" stroke="#93c5fd" stroke-width="1" fill="none"/></svg>
+            <small style="color:var(--muted)">Local demo</small>
+          </div>
+          <small style="color:var(--muted)">No stack traces shown</small>
+        </footer>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const checkBtn = document.getElementById(' checkBtn') || document.getElementById('checkBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const codeEl = document.getElementById('code');
+    const resultBox = document.getElementById('resultBox');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const autoToggle = document.getElementById('autoToggle');
+
+    // Update UI helpers
+    function setStatus(state, text){
+      statusText.textContent = text;
+      if(state === 'ok'){ statusDot.style.background = 'var(--success)'; }
+      else if(state === 'err'){ statusDot.style.background = 'var(--danger)'; }
+      else if(state === 'running'){ statusDot.style.background = '#f59e0b'; }
+      else { statusDot.style.background = '#94a3b8'; }
+    }
+
+    function setResult(text, kind){
+      resultBox.textContent = text;
+      if(kind === 'ok') setStatus('ok','✅ Success');
+      else if(kind === 'err') setStatus('err','❌ Error');
+      else setStatus('idle','Idle — ready');
+    }
+
+    // Default: show initial message
+    setResult("# Paste code and press Check", "idle");
+
+    // POST to backend
+    async function checkCode(){
+      const code = codeEl.value;
+      setStatus('running','Running check...');
+      setResult('Checking...', 'idle');
+
+      try {
+        // Change URL if your backend address is different
+        const res = await fetch('/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+
+        // If backend is at a different port/host, replace '/check' with full URL (e.g. http://127.0.0.1:5000/check)
+        if(!res.ok){
+          const text = await res.text();
+          setResult('Backend error: ' + res.status + ' ' + res.statusText + '\n' + text, 'err');
+          return;
+        }
+
+        const data = await res.json();
+
+        // The backend should return a simple JSON, e.g. { ok: true, feedback: "..."} or { ok:false, error: "...", hint:"..." }
+        if(data.ok){
+          setResult(data.feedback || "✅ Code ran successfully!", 'ok');
+        } else {
+          // show friendly message only (no raw tracebacks)
+          let msg = '';
+          if(data.error) msg += data.error + '\n';
+          if(data.hint) msg += '\nHint: ' + data.hint;
+          if(!msg) msg = '❌ Error: Unknown error';
+          setResult(msg, 'err');
+        }
+      } catch (err){
+        // Network or JSON parse errors
+        setResult('Network or server error: ' + err.message + '\nMake sure backend is running and CORS is allowed.', 'err');
+      }
+    }
+
+    // Events
+    checkBtn.addEventListener('click', checkCode);
+    clearBtn.addEventListener('click', () => {
+      codeEl.value = '';
+      setResult('# Cleared', 'idle');
+    });
+
+    // Auto-run debounce
+    let timer = null;
+    codeEl.addEventListener('input', () => {
+      if(autoToggle.checked){
+        if(timer) clearTimeout(timer);
+        timer = setTimeout(() => checkCode(), 700);
+      }
+    });
+
+    // Allow Ctrl+Enter to run
+    codeEl.addEventListener('keydown', (e) => {
+      if(e.ctrlKey && e.key === 'Enter'){
+        e.preventDefault();
+        checkCode();
+      }
+    });
+  </script>
+</body>
+</html>
